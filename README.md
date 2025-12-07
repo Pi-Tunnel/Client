@@ -16,7 +16,7 @@ PiTunnel client makes your local services accessible over the internet.
 
 ```bash
 # Install globally from npm
-npm install -g piclient
+npm install -g pi-tunnel-client
 ```
 
 ## Quick Start
