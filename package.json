@@ -1,0 +1,42 @@
+{
+  "name": "piclient",
+  "version": "1.0.0",
+  "description": "PiTunnel Client - Expose local services to the internet through PiTunnel server",
+  "main": "index.js",
+  "type": "module",
+  "bin": {
+    "piclient": "./index.js"
+  },
+  "scripts": {
+    "start": "node index.js"
+  },
+  "keywords": [
+    "tunnel",
+    "reverse-proxy",
+    "ngrok",
+    "cloudflare-tunnel",
+    "websocket",
+    "http-tunnel",
+    "tcp-tunnel",
+    "port-forwarding",
+    "localhost",
+    "expose"
+  ],
+  "author": "Pi-Tunnel",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Pi-Tunnel/Client.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Pi-Tunnel/Client/issues"
+  },
+  "homepage": "https://github.com/Pi-Tunnel/Client#readme",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "ws": "^8.14.2",
+    "commander": "^11.1.0"
+  }
+}
