@@ -1,6 +1,6 @@
 {
   "name": "pi-tunnel-client",
-  "version": "1.1.0",
+  "version": "1.2.1",
   "description": "PiTunnel Client - Expose local services to the internet through PiTunnel server",
   "main": "index.js",
   "type": "module",

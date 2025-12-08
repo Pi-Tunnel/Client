@@ -56,6 +56,8 @@ piclient logout
 | `piclient config --show` | Show configuration |
 | `piclient install` | Auto-start on system boot |
 | `piclient uninstall` | Remove auto-start |
+| `piclient update` | Update to latest version |
+| `piclient update --check` | Check for updates without installing |
 
 ## Auto-Start on System Boot
 

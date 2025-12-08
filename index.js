@@ -467,6 +467,13 @@ program
   .description('Remove PiTunnel from system startup')
   .action(uninstallService);
 
+// Update komutu
+program
+  .command('update')
+  .description('Update PiTunnel Client to latest version')
+  .option('--check', 'Only check for updates without installing')
+  .action(updateClient);
+
 // Service komutu - arka plan servisi olarak çalıştır
 program
   .command('service')
@@ -1997,5 +2004,73 @@ async function runAsService() {
       }
     }
     break; // İlk bağlantıyı foreground'da başlattıktan sonra çık
+  }
+}
+
+// ==================== Update Client ====================
+async function updateClient(options) {
+  const packageJson = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8'));
+  const currentVersion = packageJson.version;
+  const packageName = packageJson.name;
+
+  console.log('');
+  log('╔═══════════════════════════════════════════════════════════╗', 'cyan');
+  log('║                   🔄 PiTunnel Update                      ║', 'cyan');
+  log('╚═══════════════════════════════════════════════════════════╝', 'cyan');
+  console.log('');
+
+  log(`📦 Current version: ${currentVersion}`, 'white');
+  log('🔍 Checking for updates...', 'yellow');
+  console.log('');
+
+  try {
+    // npm registry'den son versiyonu al
+    const response = await fetch(`https://registry.npmjs.org/${packageName}/latest`);
+    if (!response.ok) {
+      throw new Error('Failed to fetch version info from npm');
+    }
+    const data = await response.json();
+    const latestVersion = data.version;
+
+    if (latestVersion === currentVersion) {
+      log(`✅ You are already on the latest version (${currentVersion})`, 'green');
+      console.log('');
+      return;
+    }
+
+    log(`📦 Latest version: ${latestVersion}`, 'cyan');
+    console.log('');
+
+    if (options.check) {
+      log(`⬆️  Update available: ${currentVersion} → ${latestVersion}`, 'yellow');
+      log('   Run "piclient update" to install', 'white');
+      console.log('');
+      return;
+    }
+
+    log(`⬆️  Updating: ${currentVersion} → ${latestVersion}`, 'yellow');
+    console.log('');
+
+    // npm ile güncelle
+    const npmCommand = isWindows
+      ? `npm install -g ${packageName}@latest`
+      : `sudo npm install -g ${packageName}@latest`;
+
+    log(`🔧 Running: ${npmCommand}`, 'white');
+    console.log('');
+
+    execSync(npmCommand, { stdio: 'inherit' });
+
+    console.log('');
+    log(`✅ Successfully updated to version ${latestVersion}`, 'green');
+    log('   Restart any running tunnels to use the new version', 'yellow');
+    console.log('');
+
+  } catch (error) {
+    log(`❌ Update failed: ${error.message}`, 'red');
+    console.log('');
+    log('💡 You can also update manually:', 'yellow');
+    log(`   npm install -g ${packageName}@latest`, 'white');
+    console.log('');
   }
 }
