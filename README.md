@@ -7,6 +7,7 @@ PiTunnel client makes your local services accessible over the internet.
 - **Cross-Platform**: Windows, macOS and Linux support
 - **Web Tunnel**: Route HTTP/HTTPS traffic through tunnel
 - **TCP Tunnel**: SSH, RDP, MySQL, PostgreSQL and other protocols
+- **Custom Domain**: Use your own domain instead of auto-generated subdomain
 - **WebSocket Support**: Full bidirectional WebSocket proxy (including HMR)
 - **Auto Reconnect**: Automatic reconnection when internet connection drops
 - **System Service**: Auto-start on system boot
@@ -170,6 +171,36 @@ piclient start
 # Type: Web
 
 # Now API accessible at http://your-tunnel.domain.com
+```
+
+### Custom Domain
+
+You can use your own domain instead of the auto-generated subdomain:
+
+```bash
+piclient start
+# Type: Web (HTTP/HTTPS)
+# Target: 127.0.0.1:3000
+# Domain Type: Custom domain
+# Custom domain: myapp.example.com
+
+# Now accessible at http://myapp.example.com
+```
+
+**DNS Setup:**
+1. Point your domain to the tunnel server IP (A record or CNAME)
+2. Wait for DNS propagation
+3. Start tunnel with custom domain option
+
+**Example DNS Configuration:**
+```
+myapp.example.com    A    YOUR_TUNNEL_SERVER_IP
+```
+
+You can also use the `--custom-domain` flag directly:
+
+```bash
+piclient connect -n myapp -s ws://server:8081 -t localhost:3000 --custom-domain myapp.example.com
 ```
 
 ### Remote Desktop (RDP)

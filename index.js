@@ -402,6 +402,7 @@ program
   .option('--type <type>', 'Tunnel type: web or tcp', 'web')
   .option('--protocol <protocol>', 'Protocol: http, ssh, rdp, mysql, postgresql, ftp, sip', 'http')
   .option('--token <token>', 'Auth token')
+  .option('--custom-domain <domain>', 'Custom domain for the tunnel')
   .option('--background', 'Run in background')
   .action(connectDirect);
 
@@ -515,7 +516,8 @@ async function selectSavedConnection(connections, config, runInBackground = fals
 
   connections.forEach((conn, i) => {
     const typeIcon = conn.type === 'web' ? '🌐' : '🔌';
-    log(`  [${i + 1}] ${typeIcon} ${conn.name} → ${conn.target} (${conn.protocol})`, 'white');
+    const domainInfo = conn.customDomain ? ` [${conn.customDomain}]` : '';
+    log(`  [${i + 1}] ${typeIcon} ${conn.name} → ${conn.target} (${conn.protocol})${domainInfo}`, 'white');
   });
 
   console.log('');
@@ -538,6 +540,9 @@ async function selectSavedConnection(connections, config, runInBackground = fals
     }
 
     log(`\n🚀 Starting tunnel: ${conn.name}`, 'green');
+    if (conn.customDomain) {
+      log(`🌐 Custom domain: ${conn.customDomain}`, 'cyan');
+    }
 
     await startTunnel({
       name: conn.name,
@@ -548,6 +553,7 @@ async function selectSavedConnection(connections, config, runInBackground = fals
       ports: conn.ports,
       token: config.token,
       background: background,
+      customDomain: conn.customDomain || null,
     });
   } else {
     log('❌ Invalid selection', 'red');
@@ -591,10 +597,36 @@ async function createNewConnection(config, runInBackground = false) {
   const targetInput = await ask(`Local address (default: 127.0.0.1:${defaultPort}): `);
   const target = targetInput || `127.0.0.1:${defaultPort}`;
 
-  // Subdomain
-  const suggestedName = generateSubdomain();
-  const nameInput = await ask(`Tunnel name (default: ${suggestedName}): `);
-  const name = nameInput || suggestedName;
+  // Domain seçimi
+  showMenu('Select Domain Type', [
+    { label: 'Auto-generate', value: 'Random subdomain (e.g., swift-cloud-234)' },
+    { label: 'Custom domain', value: 'Use your own domain/subdomain' },
+  ]);
+
+  const domainChoice = await ask('Select [1-2] (default: 1): ');
+  const isCustomDomain = domainChoice === '2';
+
+  let name;
+  let customDomain = null;
+
+  if (isCustomDomain) {
+    console.log('');
+    log('📝 Enter your custom domain (e.g., myapp.example.com)', 'cyan');
+    log('   Note: Make sure DNS is pointing to the tunnel server', 'white');
+    const customInput = await ask('Custom domain: ');
+    if (!customInput || !customInput.includes('.')) {
+      log('⚠️  Invalid domain format, using auto-generated subdomain', 'yellow');
+      name = generateSubdomain();
+    } else {
+      customDomain = customInput.trim().toLowerCase();
+      name = customDomain.split('.')[0]; // İlk kısım tunnel adı olarak
+      log(`✓ Using custom domain: ${customDomain}`, 'green');
+    }
+  } else {
+    const suggestedName = generateSubdomain();
+    const nameInput = await ask(`Tunnel name (default: ${suggestedName}): `);
+    name = nameInput || suggestedName;
+  }
 
   // TCP portları
   let ports = [];
@@ -613,6 +645,7 @@ async function createNewConnection(config, runInBackground = false) {
       type: tunnelType,
       protocol,
       ports,
+      customDomain,
       createdAt: new Date().toISOString(),
     });
     saveConnections(connections);
@@ -638,12 +671,13 @@ async function createNewConnection(config, runInBackground = false) {
     ports,
     token: config.token,
     background,
+    customDomain,
   });
 }
 
 // ==================== Start Tunnel ====================
 async function startTunnel(options) {
-  const { name, server, target, type, protocol, ports, token, background } = options;
+  const { name, server, target, type, protocol, ports, token, background, customDomain } = options;
 
   // Background modunda çalıştır
   if (background) {
@@ -701,6 +735,7 @@ async function startTunnel(options) {
       targetPort,
       tunnelType: type,
       protocol,
+      customDomain,
       deviceInfo: getDeviceInfo(),
     }));
 
@@ -883,6 +918,7 @@ async function connectDirect(options) {
     ports: ports,
     token: token,
     background: options.background,
+    customDomain: options.customDomain || null,
   });
 }
 
@@ -922,6 +958,14 @@ async function showStatus() {
         log(`     PID: ${info.pid}`, 'white');
         log(`     Target: ${info.target}`, 'white');
         log(`     Type: ${info.type}/${info.protocol}`, 'white');
+        if (info.customDomain) {
+          log(`     URL: http://${info.customDomain}`, 'cyan');
+        } else if (config.domain) {
+          const url = info.type === 'web'
+            ? `http://${name}.${config.domain}`
+            : `${name}.tcp.${config.domain}`;
+          log(`     URL: ${url}`, 'cyan');
+        }
         log(`     Uptime: ${uptime}`, 'white');
         log(`     Started: ${new Date(info.startedAt).toLocaleString()}`, 'white');
       } else {
@@ -1007,7 +1051,7 @@ async function showStatus() {
 
 // ==================== Start In Background ====================
 function startInBackground(options) {
-  const { name, server, target, type, protocol, ports, token } = options;
+  const { name, server, target, type, protocol, ports, token, customDomain } = options;
 
   // Argümanları hazırla
   const args = [
@@ -1026,6 +1070,10 @@ function startInBackground(options) {
 
   if (ports && ports.length > 0) {
     args.push('-p', ports.join(','));
+  }
+
+  if (customDomain) {
+    args.push('--custom-domain', customDomain);
   }
 
   // Platform-spesifik spawn ayarları
@@ -1055,6 +1103,7 @@ function startInBackground(options) {
     target,
     type,
     protocol,
+    customDomain: customDomain || null,
     startedAt: new Date().toISOString(),
   };
   savePidData(pidData);
@@ -1068,7 +1117,10 @@ function startInBackground(options) {
   log(`\n✅ Tunnel "${name}" started in background (PID: ${child.pid})`, 'green');
   log(`   Target: ${target}`, 'white');
 
-  if (domain) {
+  // Custom domain varsa onu göster, yoksa standart subdomain
+  if (customDomain) {
+    log(`   URL: http://${customDomain}`, 'cyan');
+  } else if (domain) {
     if (type === 'web') {
       log(`   URL: http://${name}.${domain}`, 'cyan');
     } else {
